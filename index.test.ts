@@ -21,9 +21,9 @@ function readVolatileKeysFromConfig(
         const keys = configured.filter(
             (k): k is string => typeof k === "string",
         );
-        return new Set([...keys, CONFIG_KEY]);
+        return new Set(keys);
     }
-    return new Set([...DEFAULT_VOLATILE_KEYS, CONFIG_KEY]);
+    return new Set(DEFAULT_VOLATILE_KEYS);
 }
 
 describe("readVolatileKeysFromConfig", () => {
@@ -32,7 +32,7 @@ describe("readVolatileKeysFromConfig", () => {
         expect(keys.has("defaultModel")).toBe(true);
         expect(keys.has("defaultProvider")).toBe(true);
         expect(keys.has("lastChangelogVersion")).toBe(true);
-        expect(keys.has(CONFIG_KEY)).toBe(true);
+        expect(keys.has(CONFIG_KEY)).toBe(false);
         expect(keys.has("theme")).toBe(false);
     });
 
@@ -41,7 +41,7 @@ describe("readVolatileKeysFromConfig", () => {
             stripVolatileKeys: [],
         });
         expect(keys.has("defaultModel")).toBe(true);
-        expect(keys.has(CONFIG_KEY)).toBe(true);
+        expect(keys.has(CONFIG_KEY)).toBe(false);
     });
 
     it("uses configured keys when provided", () => {
@@ -50,7 +50,7 @@ describe("readVolatileKeysFromConfig", () => {
         });
         expect(keys.has("myCustomKey")).toBe(true);
         expect(keys.has("anotherKey")).toBe(true);
-        expect(keys.has(CONFIG_KEY)).toBe(true);
+        expect(keys.has(CONFIG_KEY)).toBe(false);
         // Defaults should NOT be included when config is explicit
         expect(keys.has("defaultModel")).toBe(false);
     });
@@ -64,11 +64,11 @@ describe("readVolatileKeysFromConfig", () => {
         expect(keys.has("42")).toBe(false);
     });
 
-    it("always includes the config key itself so it gets cleaned up", () => {
+    it("does not include the config key itself so config persists", () => {
         const keys = readVolatileKeysFromConfig({
             stripVolatileKeys: ["something"],
         });
-        expect(keys.has(CONFIG_KEY)).toBe(true);
+        expect(keys.has(CONFIG_KEY)).toBe(false);
     });
 });
 
@@ -95,7 +95,7 @@ describe("stripVolatileKeys logic", () => {
         expect(settings).toEqual({ theme: "dark", transport: "sse" });
     });
 
-    it("strips configured keys plus the config key itself", () => {
+    it("strips configured keys but preserves the config key itself", () => {
         const settings: Record<string, unknown> = {
             theme: "dark",
             myCustomKey: "should-be-removed",
@@ -109,9 +109,11 @@ describe("stripVolatileKeys logic", () => {
             }
         }
 
-        expect(settings).toEqual({ theme: "dark" });
+        expect(settings).toEqual({
+            theme: "dark",
+            stripVolatileKeys: ["myCustomKey"],
+        });
         expect(settings.myCustomKey).toBeUndefined();
-        expect(settings.stripVolatileKeys).toBeUndefined();
     });
 
     it("does not modify settings without volatile or configured keys", () => {

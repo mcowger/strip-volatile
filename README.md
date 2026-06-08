@@ -22,7 +22,7 @@ You can configure which keys are stripped by adding a `stripVolatileKeys` array 
 }
 ```
 
-When `stripVolatileKeys` is present and non-empty, **only** the keys listed in that array are stripped (plus `stripVolatileKeys` itself, which is always cleaned up). If the array is missing or empty, the built-in defaults above are used. This means you can add or remove keys without any code changes.
+When `stripVolatileKeys` is present and non-empty, **only** the keys listed in that array are stripped. The `stripVolatileKeys` setting itself is preserved so it can remain in `settings.json` as persistent configuration. If the array is missing or empty, the built-in defaults above are used. This means you can add or remove keys without any code changes.
 
 ## Install
 
@@ -40,7 +40,7 @@ Or add to your `settings.json`:
 
 ## How it works
 
-The extension subscribes to the `session_shutdown` event with `reason: "quit"`, which fires on normal exit (Ctrl+C, Ctrl+D, SIGHUP, SIGTERM). It reads `settings.json`, removes the configured (or default) volatile keys, and writes the file back using synchronous I/O to ensure the cleanup completes before process termination.
+The extension reads `settings.json`, removes the configured (or default) volatile keys, and writes the file back using synchronous I/O. It runs on `session_start`, `agent_start`, `agent_end`, and `session_shutdown` so volatile keys are cleaned up both during the session and on exit.
 
 Respects `PI_CODING_AGENT_DIR` if set (with `~` expansion), otherwise defaults to `~/.pi/agent`.
 

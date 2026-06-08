@@ -4,13 +4,12 @@
  *
  * Reads the list of keys to strip from the `stripVolatileKeys` array
  * in settings.json. Falls back to built-in defaults if not configured.
- * The `stripVolatileKeys` key itself is always stripped.
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
 /** Default keys to strip when `stripVolatileKeys` is not set in settings.json */
 const DEFAULT_VOLATILE_KEYS = [
@@ -52,9 +51,9 @@ function readVolatileKeysFromConfig(
         const keys = configured.filter(
             (k): k is string => typeof k === "string",
         );
-        return new Set([...keys, CONFIG_KEY]);
+        return new Set(keys);
     }
-    return new Set([...DEFAULT_VOLATILE_KEYS, CONFIG_KEY]);
+    return new Set(DEFAULT_VOLATILE_KEYS);
 }
 
 /**

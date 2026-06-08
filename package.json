@@ -1,33 +1,32 @@
 {
 	"name": "@mcowger/pi-strip-volatile",
 	"version": "0.2.0",
-	"description": "A pi extension that prevents volatile runtime data from being persisted to settings.json",
-	"keywords": ["pi-package", "pi-extension"],
-	"license": "MIT",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/mcowger/pi-strip-volatile.git"
 	},
-	"publishConfig": {
-    		"access": "public",
-		"tag": "next"
-  	},
-	"type": "module",
+	"devDependencies": {
+		"@types/bun": "^1.3.14",
+		"@biomejs/biome": "^2.4.16",
+		"@earendil-works/pi-coding-agent": "0.79.0",
+		"typescript": "^6.0.3",
+		"vitest": "^4.1.8"
+	},
+	"peerDependencies": {
+		"@earendil-works/pi-coding-agent": "0.79.0"
+	},
+	"description": "A pi extension that prevents volatile runtime data from being persisted to settings.json",
 	"engines": {
 		"bun": ">=1.0"
 	},
+	"keywords": ["pi-package", "pi-extension"],
+	"license": "MIT",
 	"pi": {
 		"extensions": ["./index.ts"]
 	},
-	"peerDependencies": {
-		"@earendil-works/pi-coding-agent": "0.74.0"
-	},
-	"devDependencies": {
-		"@types/bun": "^1.3.13",
-		"@biomejs/biome": "^2.4.13",
-		"@earendil-works/pi-coding-agent": "0.74.0",
-		"typescript": "^6.0.3",
-		"vitest": "latest"
+	"publishConfig": {
+		"access": "public",
+		"tag": "next"
 	},
 	"scripts": {
 		"typecheck": "tsc --noEmit",
@@ -35,5 +34,6 @@
 		"lint:fix": "biome check --write .",
 		"test": "vitest run",
 		"check": "bun run lint && bun run typecheck && bun run test"
-	}
+	},
+	"type": "module"
 }

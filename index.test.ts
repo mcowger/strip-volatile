@@ -1,30 +1,10 @@
 import { describe, expect, it } from "vitest";
-
-// The extension's core logic is tested here without requiring full pi runtime
-
-const DEFAULT_VOLATILE_KEYS = [
-    "defaultModel",
-    "defaultProvider",
-    "lastChangelogVersion",
-];
+import {
+    readVolatileKeysFromConfig,
+    stripVolatileKeysFromSettings,
+} from "./index.js";
 
 const CONFIG_KEY = "stripVolatileKeys";
-
-/**
- * Mirrors the readVolatileKeysFromConfig logic from index.ts.
- */
-function readVolatileKeysFromConfig(
-    settings: Record<string, unknown>,
-): Set<string> {
-    const configured = settings[CONFIG_KEY];
-    if (Array.isArray(configured) && configured.length > 0) {
-        const keys = configured.filter(
-            (k): k is string => typeof k === "string",
-        );
-        return new Set(keys);
-    }
-    return new Set(DEFAULT_VOLATILE_KEYS);
-}
 
 describe("readVolatileKeysFromConfig", () => {
     it("returns default keys when config is absent", () => {
@@ -74,7 +54,6 @@ describe("readVolatileKeysFromConfig", () => {
 
 describe("stripVolatileKeys logic", () => {
     it("strips default volatile keys from settings object", () => {
-        const volatileKeys = readVolatileKeysFromConfig({});
         const settings: Record<string, unknown> = {
             theme: "dark",
             defaultModel: "claude-opus-4-7",
@@ -83,13 +62,7 @@ describe("stripVolatileKeys logic", () => {
             transport: "sse",
         };
 
-        let changed = false;
-        for (const key of Object.keys(settings)) {
-            if (volatileKeys.has(key)) {
-                delete settings[key];
-                changed = true;
-            }
-        }
+        const changed = stripVolatileKeysFromSettings(settings);
 
         expect(changed).toBe(true);
         expect(settings).toEqual({ theme: "dark", transport: "sse" });
@@ -102,12 +75,7 @@ describe("stripVolatileKeys logic", () => {
             stripVolatileKeys: ["myCustomKey"],
         };
 
-        const volatileKeys = readVolatileKeysFromConfig(settings);
-        for (const key of Object.keys(settings)) {
-            if (volatileKeys.has(key)) {
-                delete settings[key];
-            }
-        }
+        stripVolatileKeysFromSettings(settings);
 
         expect(settings).toEqual({
             theme: "dark",
@@ -117,18 +85,14 @@ describe("stripVolatileKeys logic", () => {
     });
 
     it("does not modify settings without volatile or configured keys", () => {
-        const volatileKeys = readVolatileKeysFromConfig({});
         const settings: Record<string, unknown> = {
             theme: "dark",
             transport: "sse",
         };
 
-        for (const key of Object.keys(settings)) {
-            if (volatileKeys.has(key)) {
-                delete settings[key];
-            }
-        }
+        const changed = stripVolatileKeysFromSettings(settings);
 
+        expect(changed).toBe(false);
         expect(settings).toEqual({ theme: "dark", transport: "sse" });
     });
 });

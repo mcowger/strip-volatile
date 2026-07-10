@@ -40,9 +40,11 @@ Or add to your `settings.json`:
 
 ## How it works
 
-The extension reads `settings.json`, removes the configured (or default) volatile keys, and writes the file back using synchronous I/O. It runs on `session_start`, `agent_start`, `agent_end`, and `session_shutdown` so volatile keys are cleaned up both during the session and on exit.
+The extension reads `settings.json`, removes the configured (or default) volatile keys, and writes the file back using the same lock strategy as Pi 0.80.6. It runs on `session_start`, `agent_start`, `agent_end`, and `session_shutdown` so volatile keys are cleaned up both during the session and on exit.
 
 Respects `PI_CODING_AGENT_DIR` if set (with `~` expansion), otherwise defaults to `~/.pi/agent`.
+
+Requires Pi 0.80.6 or later.
 
 ## Develop
 

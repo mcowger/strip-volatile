@@ -10,6 +10,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import lockfile from "proper-lockfile";
 
 /** Default keys to strip when `stripVolatileKeys` is not set in settings.json */
 const DEFAULT_VOLATILE_KEYS = [
@@ -20,6 +21,10 @@ const DEFAULT_VOLATILE_KEYS = [
 
 /** The settings.json key that configures which keys to strip */
 const CONFIG_KEY = "stripVolatileKeys";
+
+const LOCK_MAX_ATTEMPTS = 10;
+const LOCK_RETRY_DELAY_MS = 20;
+const LOCK_ERROR_CODE = "ELOCKED";
 
 /**
  * Resolve the agent directory, matching pi's getAgentDir() behavior.
@@ -43,7 +48,7 @@ function getGlobalSettingsPath(): string {
  * Read the list of volatile keys from settings.json.
  * Uses the `stripVolatileKeys` array if present, otherwise falls back to defaults.
  */
-function readVolatileKeysFromConfig(
+export function readVolatileKeysFromConfig(
     settings: Record<string, unknown>,
 ): Set<string> {
     const configured = settings[CONFIG_KEY];
@@ -56,6 +61,48 @@ function readVolatileKeysFromConfig(
     return new Set(DEFAULT_VOLATILE_KEYS);
 }
 
+export function stripVolatileKeysFromSettings(
+    settings: Record<string, unknown>,
+): boolean {
+    const volatileKeys = readVolatileKeysFromConfig(settings);
+    let changed = false;
+
+    for (const key of Object.keys(settings)) {
+        if (volatileKeys.has(key)) {
+            delete settings[key];
+            changed = true;
+        }
+    }
+
+    return changed;
+}
+
+function acquireSettingsLock(settingsPath: string): () => void {
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= LOCK_MAX_ATTEMPTS; attempt++) {
+        try {
+            return lockfile.lockSync(settingsPath, { realpath: false });
+        } catch (error) {
+            const code =
+                typeof error === "object" && error !== null && "code" in error
+                    ? String(error.code)
+                    : undefined;
+            if (code !== LOCK_ERROR_CODE || attempt === LOCK_MAX_ATTEMPTS) {
+                throw error;
+            }
+            lastError = error;
+
+            const start = Date.now();
+            while (Date.now() - start < LOCK_RETRY_DELAY_MS) {
+                // Wait synchronously so cleanup remains ordered with Pi's synchronous lock.
+            }
+        }
+    }
+
+    throw lastError ?? new Error("Failed to acquire settings lock");
+}
+
 /**
  * Strip volatile keys from the global settings.json file.
  */
@@ -66,21 +113,13 @@ function stripVolatileKeys(): void {
         return;
     }
 
+    let release: (() => void) | undefined;
     try {
+        release = acquireSettingsLock(settingsPath);
         const raw = readFileSync(settingsPath, "utf-8");
         const settings = JSON.parse(raw);
 
-        const volatileKeys = readVolatileKeysFromConfig(settings);
-
-        let changed = false;
-        for (const key of Object.keys(settings)) {
-            if (volatileKeys.has(key)) {
-                delete settings[key];
-                changed = true;
-            }
-        }
-
-        if (changed) {
+        if (stripVolatileKeysFromSettings(settings)) {
             writeFileSync(
                 settingsPath,
                 `${JSON.stringify(settings, null, 2)}\n`,
@@ -89,6 +128,8 @@ function stripVolatileKeys(): void {
         }
     } catch {
         // Silently ignore parse/write errors - don't disrupt pi's shutdown
+    } finally {
+        release?.();
     }
 }
 
